@@ -1,3 +1,4 @@
+# Build the WSGI (Django) server image
 FROM python:3.10-slim as wsgi-server
 
 RUN apt update \
@@ -9,27 +10,30 @@ ENV DJANGO_SUPERUSER_PASSWORD=password
 ENV DJANGO_SUPERUSER_EMAIL=admin@example.com
 
 COPY requirements.txt ./
-
 RUN pip install --no-cache-dir -r requirements.txt
 
 WORKDIR /app
-
 COPY . .
-
 RUN python manage.py check --deploy \
     && python manage.py collectstatic --no-input \
     && dos2unix entrypoint.sh \
     && chmod +x entrypoint.sh
-
 ENTRYPOINT ["./entrypoint.sh"]
-
 EXPOSE 8000
 
-
+# Build the web (Nginx) server image
 FROM nginx:1.22-alpine as web-server
 
-WORKDIR /app
+# Install gettext for envsubst
+RUN apk add --no-cache gettext
 
+# Set the directory for serving static files
+WORKDIR /app
 COPY --from=wsgi-server /app/static /app/static
 
+# Copy the nginx configuration template
 COPY nginx.conf /etc/nginx/templates/default.conf.template
+
+# Use environment variables to substitute into nginx config
+ENV BACKEND_URL=http://wsgi-server:8000
+CMD ["/bin/sh", "-c", "envsubst < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
