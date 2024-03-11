@@ -35,5 +35,5 @@ COPY --from=wsgi-server /app/static /app/static
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Use environment variables to substitute into nginx config
-ENV BACKEND_URL=http://wsgi-server:8000
-CMD ["/bin/sh", "-c", "envsubst < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
+ENV BACKEND_URL=http://test:8000
+ 
